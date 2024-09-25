@@ -24,7 +24,8 @@ declare global {
 }
 function App() {
 
-  const [count, setCount] = useState(0)
+  const [accounts, setAccounts] = useState<string[]>([]);
+  const [selectedAccount, setSelectedAccount] = useState<string>('');
   const [jwt, setJwt] = useState('')
   const [decodedJwt, setDecodedJwt] = useState('')
   const [walletAddress, setWalletAddress] = useState('')
@@ -54,7 +55,8 @@ function App() {
   async function connectToMetaMask() {
     if (typeof window.ethereum !== 'undefined') {
         try {
-            await window.ethereum.request({ method: 'eth_requestAccounts' });
+            const accounts = await window.ethereum.request({ method: 'eth_requestAccounts' });
+            setAccounts(accounts as string[]);
             const provider = new BrowserProvider(window.ethereum);
             const signer = await provider.getSigner();
             setSigner(signer);
@@ -68,6 +70,14 @@ function App() {
         console.log('MetaMask is not installed');
     }
   }
+
+  async function handleAccountSelection(account: string) {
+    setSelectedAccount(account);
+    const provider = new BrowserProvider(window.ethereum!);
+    const signer = await provider.getSigner(account);
+    setSigner(signer);
+  }
+
   async function signJWT() {
     if (!signer) {
         console.error('Not connected to MetaMask');
@@ -184,31 +194,53 @@ AddSigningAlgorithm('EthTypedDataSignature', EthTypedDataSignerAlgorithm())
 AddVerifierAlgorithm('EthTypedDataSignature', verifyEthTypedDataSignature, validSignatures)
 
 return (
-    <>
-      <button onClick={connectToMetaMask}>Connect to MetaMask</button>
-      <div style={{ marginBottom: '20px' }}></div>
-      <text>{walletAddress}</text>
-      <div style={{ marginBottom: '20px' }}></div>
-      <button onClick={signJWT}>Sign JWT</button>
-      <div style={{ marginBottom: '20px' }}></div>
-      <text id="result">{jwt + decodedJwt}</text>
-      <div style={{ marginBottom: '20px' }}></div>
-      <button onClick={resolveDID}>Resolve DID</button>
-      <div style={{ marginBottom: '20px' }}></div>
-      <text>{verificationResponse}</text>
-      <div style={{ marginBottom: '20px' }}></div>
-      <button onClick={prepareVCCreation}>VC Creation</button>
-      <text>{vcJwt}</text>
-      <div style={{ marginBottom: '20px' }}></div>
-      <text>{decodedVcJwt}</text>
-      <div style={{ marginBottom: '20px' }}></div>
-      <button onClick={verifyVC}>Validate VC</button>
-      <div style={{ marginBottom: '20px' }}></div>
-      <text>{validationState}</text>
-      <div style={{ marginBottom: '20px' }}></div>
-      <button onClick={createVP}>VP Creation</button>
-    </>
-  )
+  <>
+    <button onClick={connectToMetaMask}>Connect to MetaMask</button>
+    <div style={{ marginBottom: '20px' }}></div>
+    {accounts.length > 0 && (
+      <div>
+        <h3>Select an account:</h3>
+        {accounts.map((account) => (
+          <div key={account}>
+            <input
+              type="radio"
+              id={account}
+              name="account"
+              value={account}
+              checked={selectedAccount === account}
+              onChange={() => handleAccountSelection(account)}
+            />
+            <label htmlFor={account}>{account}</label>
+          </div>
+        ))}
+      </div>
+    )}
+    <div style={{ marginBottom: '20px' }}></div>
+    {selectedAccount && (
+      <>
+        <p>Selected Account: {selectedAccount}</p>
+        <button onClick={signJWT}>Sign JWT</button>
+        <div style={{ marginBottom: '20px' }}></div>
+        <text id="result">{jwt + decodedJwt}</text>
+        <div style={{ marginBottom: '20px' }}></div>
+        <button onClick={resolveDID}>Resolve DID</button>
+        <div style={{ marginBottom: '20px' }}></div>
+        <text>{verificationResponse}</text>
+        <div style={{ marginBottom: '20px' }}></div>
+        <button onClick={prepareVCCreation}>VC Creation</button>
+        <text>{vcJwt}</text>
+        <div style={{ marginBottom: '20px' }}></div>
+        <text>{decodedVcJwt}</text>
+        <div style={{ marginBottom: '20px' }}></div>
+        <button onClick={verifyVC}>Validate VC</button>
+        <div style={{ marginBottom: '20px' }}></div>
+        <text>{validationState}</text>
+        <div style={{ marginBottom: '20px' }}></div>
+        <button onClick={createVP}>VP Creation</button>
+      </>
+    )}
+  </>
+)
 }
 
 export default App
